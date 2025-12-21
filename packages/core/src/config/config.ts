@@ -78,6 +78,10 @@ import { WorkspaceContext } from '../utils/workspaceContext.js';
 import { Storage } from './storage.js';
 import type { ShellExecutionConfig } from '../services/shellExecutionService.js';
 import { FileExclusions } from '../utils/ignorePatterns.js';
+import {
+  getShellConfiguration,
+  type ShellConfiguration,
+} from '../utils/shell-utils.js';
 import type { EventEmitter } from 'node:events';
 import { MessageBus } from '../confirmation-bus/message-bus.js';
 import { PolicyEngine } from '../policy/policy-engine.js';
@@ -298,6 +302,8 @@ export interface ConfigParameters {
   enableInteractiveShell?: boolean;
   skipNextSpeakerCheck?: boolean;
   shellExecutionConfig?: ShellExecutionConfig;
+  shellConfigurationOverride?: Partial<ShellConfiguration>;
+  shellGuidance?: string;
   extensionManagement?: boolean;
   enablePromptCompletion?: boolean;
   truncateToolOutputThreshold?: number;
@@ -418,6 +424,8 @@ export class Config {
   private readonly enableInteractiveShell: boolean;
   private readonly skipNextSpeakerCheck: boolean;
   private shellExecutionConfig: ShellExecutionConfig;
+  private shellConfigurationOverride: Partial<ShellConfiguration> | undefined;
+  private shellGuidance: string | undefined;
   private readonly extensionManagement: boolean = true;
   private readonly enablePromptCompletion: boolean = false;
   private readonly truncateToolOutputThreshold: number;
@@ -544,11 +552,14 @@ export class Config {
     this.useRipgrep = params.useRipgrep ?? true;
     this.enableInteractiveShell = params.enableInteractiveShell ?? false;
     this.skipNextSpeakerCheck = params.skipNextSpeakerCheck ?? true;
+    this.shellConfigurationOverride = params.shellConfigurationOverride;
+    this.shellGuidance = params.shellGuidance;
     this.shellExecutionConfig = {
       terminalWidth: params.shellExecutionConfig?.terminalWidth ?? 80,
       terminalHeight: params.shellExecutionConfig?.terminalHeight ?? 24,
       showColor: params.shellExecutionConfig?.showColor ?? false,
       pager: params.shellExecutionConfig?.pager ?? 'cat',
+      shellConfigurationOverride: params.shellConfigurationOverride,
     };
     this.truncateToolOutputThreshold =
       params.truncateToolOutputThreshold ??
@@ -1478,6 +1489,28 @@ export class Config {
     return this.shellExecutionConfig;
   }
 
+  getShellConfiguration(): ShellConfiguration {
+    return getShellConfiguration(this.shellConfigurationOverride);
+  }
+
+  getShellGuidance(): string | undefined {
+    return this.shellGuidance;
+  }
+
+  setShellConfigurationOverride(
+    override: Partial<ShellConfiguration> | undefined,
+  ): void {
+    this.shellConfigurationOverride = override;
+    this.shellExecutionConfig = {
+      ...this.shellExecutionConfig,
+      shellConfigurationOverride: override,
+    };
+  }
+
+  setShellGuidance(guidance: string | undefined): void {
+    this.shellGuidance = guidance;
+  }
+
   setShellExecutionConfig(config: ShellExecutionConfig): void {
     this.shellExecutionConfig = {
       terminalWidth:
@@ -1486,6 +1519,9 @@ export class Config {
         config.terminalHeight ?? this.shellExecutionConfig.terminalHeight,
       showColor: config.showColor ?? this.shellExecutionConfig.showColor,
       pager: config.pager ?? this.shellExecutionConfig.pager,
+      shellConfigurationOverride:
+        config.shellConfigurationOverride ??
+        this.shellExecutionConfig.shellConfigurationOverride,
     };
   }
   getScreenReader(): boolean {

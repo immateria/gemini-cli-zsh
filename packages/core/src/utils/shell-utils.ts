@@ -5,6 +5,7 @@
  */
 
 import os from 'node:os';
+import path from 'node:path';
 import { quote } from 'shell-quote';
 import {
   spawn,
@@ -21,7 +22,7 @@ export const SHELL_TOOL_NAMES = ['run_shell_command', 'ShellTool'];
 /**
  * An identifier for the shell type.
  */
-export type ShellType = 'cmd' | 'powershell' | 'bash';
+export type ShellType = 'cmd' | 'powershell' | 'bash' | 'zsh' | 'posix' | 'other';
 
 /**
  * Defines the configuration required to execute a command string within a specific shell.
@@ -423,16 +424,55 @@ function parsePowerShellCommandDetails(
   }
 }
 
+function inferShellTypeFromExecutable(
+  executable: string | undefined,
+): ShellType | null {
+  if (!executable) {
+    return null;
+  }
+
+  const basename = path.basename(executable).toLowerCase();
+  const normalized = basename.endsWith('.exe')
+    ? basename.slice(0, -4)
+    : basename;
+  if (normalized === 'powershell' || normalized === 'pwsh') {
+    return 'powershell';
+  }
+  if (normalized === 'cmd') {
+    return 'cmd';
+  }
+  if (normalized === 'zsh') {
+    return 'zsh';
+  }
+  if (
+    normalized === 'bash' ||
+    normalized === 'sh' ||
+    normalized === 'dash' ||
+    normalized === 'ksh'
+  ) {
+    return 'posix';
+  }
+  if (normalized === 'fish' || normalized === 'nu' || normalized === 'elvish') {
+    return 'other';
+  }
+
+  return null;
+}
+
 export function parseCommandDetails(
   command: string,
+  configuration: ShellConfiguration = getShellConfiguration(),
 ): CommandParseResult | null {
-  const configuration = getShellConfiguration();
 
   if (configuration.shell === 'powershell') {
     return parsePowerShellCommandDetails(command, configuration.executable);
   }
 
-  if (configuration.shell === 'bash') {
+  if (
+    configuration.shell === 'bash' ||
+    configuration.shell === 'zsh' ||
+    configuration.shell === 'posix'
+  ) {
     return parseBashCommandDetails(command);
   }
 
@@ -447,33 +487,53 @@ export function parseCommandDetails(
  *
  * @returns The ShellConfiguration for the current environment.
  */
-export function getShellConfiguration(): ShellConfiguration {
-  if (isWindows()) {
-    const comSpec = process.env['ComSpec'];
-    if (comSpec) {
-      const executable = comSpec.toLowerCase();
-      if (
-        executable.endsWith('powershell.exe') ||
-        executable.endsWith('pwsh.exe')
-      ) {
+export function getShellConfiguration(
+  override?: Partial<ShellConfiguration>,
+): ShellConfiguration {
+  const baseConfig = isWindows()
+    ? (() => {
+        const comSpec = process.env['ComSpec'];
+        if (comSpec) {
+          const executable = comSpec.toLowerCase();
+          if (
+            executable.endsWith('powershell.exe') ||
+            executable.endsWith('pwsh.exe')
+          ) {
+            return {
+              executable: comSpec,
+              argsPrefix: ['-NoProfile', '-Command'],
+              shell: 'powershell',
+            } as ShellConfiguration;
+          }
+        }
+
+        // Default to PowerShell for all other Windows configurations.
         return {
-          executable: comSpec,
+          executable: 'powershell.exe',
           argsPrefix: ['-NoProfile', '-Command'],
           shell: 'powershell',
-        };
-      }
-    }
+        } as ShellConfiguration;
+      })()
+    : {
+        executable: 'bash',
+        argsPrefix: ['-c'],
+        shell: 'bash',
+      };
 
-    // Default to PowerShell for all other Windows configurations.
-    return {
-      executable: 'powershell.exe',
-      argsPrefix: ['-NoProfile', '-Command'],
-      shell: 'powershell',
-    };
+  if (!override) {
+    return baseConfig;
   }
 
-  // Unix-like systems (Linux, macOS)
-  return { executable: 'bash', argsPrefix: ['-c'], shell: 'bash' };
+  const inferredShell = inferShellTypeFromExecutable(override.executable);
+  const shell = override.shell ?? inferredShell ?? baseConfig.shell;
+
+  return {
+    ...baseConfig,
+    ...override,
+    executable: override.executable ?? baseConfig.executable,
+    argsPrefix: override.argsPrefix ?? baseConfig.argsPrefix,
+    shell,
+  };
 }
 
 /**
@@ -502,7 +562,12 @@ export function escapeShellArg(arg: string, shell: ShellType): string {
       // Simple Windows escaping for cmd.exe: wrap in double quotes and escape inner double quotes.
       return `"${arg.replace(/"/g, '""')}"`;
     case 'bash':
+    case 'zsh':
+    case 'posix':
     default:
+      if (shell === 'other') {
+        return arg;
+      }
       // POSIX shell escaping using shell-quote.
       return quote([arg]);
   }
@@ -514,8 +579,11 @@ export function escapeShellArg(arg: string, shell: ShellType): string {
  * @param command The shell command string to parse
  * @returns An array of individual command strings
  */
-export function splitCommands(command: string): string[] {
-  const parsed = parseCommandDetails(command);
+export function splitCommands(
+  command: string,
+  configuration?: ShellConfiguration,
+): string[] {
+  const parsed = parseCommandDetails(command, configuration);
   if (!parsed || parsed.hasError) {
     return [];
   }
@@ -531,8 +599,11 @@ export function splitCommands(command: string): string[] {
  * @example getCommandRoot("ls -la /tmp") returns "ls"
  * @example getCommandRoot("git status && npm test") returns "git"
  */
-export function getCommandRoot(command: string): string | undefined {
-  const parsed = parseCommandDetails(command);
+export function getCommandRoot(
+  command: string,
+  configuration?: ShellConfiguration,
+): string | undefined {
+  const parsed = parseCommandDetails(command, configuration);
   if (!parsed || parsed.hasError || parsed.details.length === 0) {
     return undefined;
   }
@@ -540,12 +611,15 @@ export function getCommandRoot(command: string): string | undefined {
   return parsed.details[0]?.name;
 }
 
-export function getCommandRoots(command: string): string[] {
+export function getCommandRoots(
+  command: string,
+  configuration?: ShellConfiguration,
+): string[] {
   if (!command) {
     return [];
   }
 
-  const parsed = parseCommandDetails(command);
+  const parsed = parseCommandDetails(command, configuration);
   if (!parsed || parsed.hasError) {
     return [];
   }
@@ -555,7 +629,7 @@ export function getCommandRoots(command: string): string[] {
 
 export function stripShellWrapper(command: string): string {
   const pattern =
-    /^\s*(?:(?:sh|bash|zsh)\s+-c|cmd\.exe\s+\/c|powershell(?:\.exe)?\s+(?:-NoProfile\s+)?-Command|pwsh(?:\.exe)?\s+(?:-NoProfile\s+)?-Command)\s+/i;
+    /^\s*(?:(?:sh|bash|zsh|dash|ksh|fish|elvish|nu)\s+-c|cmd\.exe\s+\/c|powershell(?:\.exe)?\s+(?:-NoProfile\s+)?-Command|pwsh(?:\.exe)?\s+(?:-NoProfile\s+)?-Command)\s+/i;
   const match = command.match(pattern);
   if (match) {
     let newCommand = command.substring(match[0].length).trim();

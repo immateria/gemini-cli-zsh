@@ -138,6 +138,12 @@ export type HistoryItemAbout = HistoryItemBase & {
 export type HistoryItemHelp = HistoryItemBase & {
   type: 'help';
   timestamp: Date;
+  shellInfo?: {
+    executable: string;
+    argsPrefix: string[];
+    shell: string;
+    guidance?: string;
+  };
 };
 
 export type HistoryItemStats = HistoryItemBase & {

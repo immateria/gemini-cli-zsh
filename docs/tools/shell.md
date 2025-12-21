@@ -10,9 +10,10 @@ command, including interactive commands that require user input (e.g., `vim`,
 `git rebase -i`) if the `tools.shell.enableInteractiveShell` setting is set to
 `true`.
 
-On Windows, commands are executed with `powershell.exe -NoProfile -Command`
-(unless you explicitly point `ComSpec` at another shell). On other platforms,
-they are executed with `bash -c`.
+By default, Windows uses `powershell.exe -NoProfile -Command` (unless you
+explicitly point `ComSpec` at another shell) and other platforms use `bash -c`.
+You can override the shell executable and arguments in settings (for example
+`zsh`, `nu`, or `elvish`).
 
 ### Arguments
 
@@ -28,7 +29,8 @@ they are executed with `bash -c`.
 ## How to use `run_shell_command` with the Gemini CLI
 
 When using `run_shell_command`, the command is executed as a subprocess.
-`run_shell_command` can start background processes using `&`. The tool returns
+On POSIX-style shells, you can start background processes using `&`. On
+non-POSIX shells, background behavior depends on the shell. The tool returns
 detailed information about the execution, including:
 
 - `Command`: The command that was executed.
@@ -38,7 +40,7 @@ detailed information about the execution, including:
 - `Error`: Any error message reported by the subprocess.
 - `Exit Code`: The exit code of the command.
 - `Signal`: The signal number if the command was terminated by a signal.
-- `Background PIDs`: A list of PIDs for any background processes started.
+- `Background PIDs`: A list of PIDs for any background processes started (POSIX shells only).
 
 Usage:
 
@@ -70,6 +72,37 @@ run_shell_command(command="npm run dev &", description="Start development server
 
 You can configure the behavior of the `run_shell_command` tool by modifying your
 `settings.json` file or by using the `/settings` command in the Gemini CLI.
+
+### Choosing a shell executable or profile
+
+You can choose a shell profile or override the executable/arguments directly.
+Profiles are handy for switching to zsh or non-POSIX shells without restarting.
+
+**Example `settings.json`:**
+
+```json
+{
+  "tools": {
+    "shell": {
+      "profile": "zsh"
+    }
+  }
+}
+```
+
+**Example `settings.json` (custom executable):**
+
+```json
+{
+  "tools": {
+    "shell": {
+      "executable": "/data/data/com.termux/files/usr/bin/zsh",
+      "argsPrefix": ["-c"],
+      "shellType": "zsh"
+    }
+  }
+}
+```
 
 ### Enabling interactive commands
 

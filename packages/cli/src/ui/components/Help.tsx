@@ -11,9 +11,15 @@ import { type SlashCommand, CommandKind } from '../commands/types.js';
 
 interface Help {
   commands: readonly SlashCommand[];
+  shellInfo?: {
+    executable: string;
+    argsPrefix: string[];
+    shell: string;
+    guidance?: string;
+  };
 }
 
-export const Help: React.FC<Help> = ({ commands }) => (
+export const Help: React.FC<Help> = ({ commands, shellInfo }) => (
   <Box
     flexDirection="column"
     marginBottom={1}
@@ -57,6 +63,16 @@ export const Help: React.FC<Help> = ({ commands }) => (
       </Text>
       ).
     </Text>
+    {shellInfo && (
+      <Text color={theme.text.secondary}>
+        Shell config: {shellInfo.executable}
+        {shellInfo.argsPrefix.length
+          ? ` ${shellInfo.argsPrefix.join(' ')}`
+          : ''}{' '}
+        ({shellInfo.shell})
+        {shellInfo.guidance ? ` — ${shellInfo.guidance}` : ''}
+      </Text>
+    )}
 
     <Box height={1} />
 
