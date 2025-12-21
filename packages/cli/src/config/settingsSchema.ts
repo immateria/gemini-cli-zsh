@@ -953,6 +953,67 @@ const SETTINGS_SCHEMA = {
               'The maximum time in seconds allowed without output from the shell command. Defaults to 5 minutes.',
             showInDialog: false,
           },
+          executable: {
+            type: 'string',
+            label: 'Shell Executable',
+            category: 'Tools',
+            requiresRestart: false,
+            default: undefined as string | undefined,
+            description:
+              'Override the shell executable used to run shell commands (for example "/bin/zsh", "/data/data/com.termux/files/usr/bin/zsh").',
+            showInDialog: false,
+          },
+          argsPrefix: {
+            type: 'array',
+            label: 'Shell Arguments',
+            category: 'Tools',
+            requiresRestart: false,
+            default: undefined as string[] | undefined,
+            description:
+              'Arguments passed before the command string (for example ["-c"] or ["-NoProfile", "-Command"]).',
+            showInDialog: false,
+            items: { type: 'string' },
+          },
+          profile: {
+            type: 'string',
+            label: 'Shell Profile',
+            category: 'Tools',
+            requiresRestart: false,
+            default: undefined as string | undefined,
+            description:
+              'Quickly switch between preset shell configurations (e.g., zsh, nushell).',
+            showInDialog: true,
+            enum: [
+              'bash',
+              'zsh',
+              'fish',
+              'nushell',
+              'elvish',
+              'powershell',
+              'cmd',
+            ],
+          },
+          shellType: {
+            type: 'string',
+            label: 'Shell Type',
+            category: 'Tools',
+            requiresRestart: false,
+            default: undefined as string | undefined,
+            description:
+              'Shell family used for parsing/escaping. Use "zsh" for zsh, "posix" for sh-compatible shells, or "other" for shells like nushell or elvish.',
+            showInDialog: false,
+            enum: ['bash', 'zsh', 'posix', 'powershell', 'cmd', 'other'],
+          },
+          guidance: {
+            type: 'string',
+            label: 'Shell Guidance',
+            category: 'Tools',
+            requiresRestart: false,
+            default: undefined as string | undefined,
+            description:
+              'Optional guidance to append to the shell tool description (for example, zsh/nushell syntax reminders). If omitted, profile-specific guidance is used when available.',
+            showInDialog: false,
+          },
         },
       },
       autoAccept: {

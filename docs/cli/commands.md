@@ -326,10 +326,10 @@ The `!` prefix lets you interact with your system's shell directly from within
 Gemini CLI.
 
 - **`!<shell_command>`**
-  - **Description:** Execute the given `<shell_command>` using `bash` on
-    Linux/macOS or `powershell.exe -NoProfile -Command` on Windows (unless you
-    override `ComSpec`). Any output or errors from the command are displayed in
-    the terminal.
+  - **Description:** Execute the given `<shell_command>` using the configured
+    shell (defaults to `bash -c` on Linux/macOS and
+    `powershell.exe -NoProfile -Command` on Windows unless overridden). Any
+    output or errors from the command are displayed in the terminal.
   - **Examples:**
     - `!ls -la` (executes `ls -la` and returns to Gemini CLI)
     - `!git status` (executes `git status` and returns to Gemini CLI)
