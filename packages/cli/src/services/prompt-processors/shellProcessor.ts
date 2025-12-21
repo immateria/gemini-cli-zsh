@@ -8,7 +8,6 @@ import {
   ApprovalMode,
   checkCommandPermissions,
   escapeShellArg,
-  getShellConfiguration,
   ShellExecutionService,
   flatMapTextParts,
 } from '@google/gemini-cli-core';
@@ -96,7 +95,7 @@ export class ShellProcessor implements IPromptProcessor {
       ];
     }
 
-    const { shell } = getShellConfiguration();
+    const { shell } = config.getShellConfiguration();
     const userArgsEscaped = escapeShellArg(userArgsRaw, shell);
 
     const resolvedInjections: ResolvedShellInjection[] = injections.map(

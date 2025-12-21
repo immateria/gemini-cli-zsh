@@ -11,6 +11,7 @@ import {
   parseCommandDetails,
   SHELL_TOOL_NAMES,
   type ParsedCommandDetail,
+  type ShellConfiguration,
 } from './shell-utils.js';
 
 /**
@@ -47,20 +48,27 @@ export function checkCommandPermissions(
   blockReason?: string;
   isHardDenial?: boolean;
 } {
-  const parseResult = parseCommandDetails(command);
+  const shellConfig = config.getShellConfiguration();
+  const parseResult = parseCommandDetails(command, shellConfig);
   if (!parseResult || parseResult.hasError) {
-    return {
-      allAllowed: false,
-      disallowedCommands: [command],
-      blockReason: 'Command rejected because it could not be parsed safely',
-      isHardDenial: true,
-    };
+    const shouldFallback =
+      shellConfig.shell !== 'bash' && shellConfig.shell !== 'powershell';
+    if (!shouldFallback) {
+      return {
+        allAllowed: false,
+        disallowedCommands: [command],
+        blockReason: 'Command rejected because it could not be parsed safely',
+        isHardDenial: true,
+      };
+    }
   }
 
   const normalize = (cmd: string): string => cmd.trim().replace(/\s+/g, ' ');
-  const commandsToValidate = parseResult.details
-    .map((detail: ParsedCommandDetail) => normalize(detail.text))
-    .filter(Boolean);
+  const commandsToValidate = parseResult?.details?.length
+    ? parseResult.details
+        .map((detail: ParsedCommandDetail) => normalize(detail.text))
+        .filter(Boolean)
+    : [normalize(command)].filter(Boolean);
   const invocation: AnyToolInvocation & { params: { command: string } } = {
     params: { command: '' },
   } as AnyToolInvocation & { params: { command: string } };
@@ -210,6 +218,7 @@ export function isCommandAllowed(
 export function isShellInvocationAllowlisted(
   invocation: AnyToolInvocation,
   allowedPatterns: string[],
+  shellConfiguration?: ShellConfiguration,
 ): boolean {
   if (!allowedPatterns.length) {
     return false;
@@ -246,15 +255,20 @@ export function isShellInvocationAllowlisted(
 
   const command = commandValue.trim();
 
-  const parseResult = parseCommandDetails(command);
+  const parseResult = parseCommandDetails(
+    command,
+    shellConfiguration,
+  );
   if (!parseResult || parseResult.hasError) {
     return false;
   }
 
   const normalize = (cmd: string): string => cmd.trim().replace(/\s+/g, ' ');
-  const commandsToValidate = parseResult.details
-    .map((detail: ParsedCommandDetail) => normalize(detail.text))
-    .filter(Boolean);
+  const commandsToValidate = parseResult?.details?.length
+    ? parseResult.details
+        .map((detail: ParsedCommandDetail) => normalize(detail.text))
+        .filter(Boolean)
+    : [normalize(command)].filter(Boolean);
 
   if (commandsToValidate.length === 0) {
     return false;

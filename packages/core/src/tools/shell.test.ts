@@ -36,7 +36,10 @@ vi.mock('node:os', async (importOriginal) => {
 vi.mock('crypto');
 vi.mock('../utils/summarizer.js');
 
-import { initializeShellParsers } from '../utils/shell-utils.js';
+import {
+  getShellConfiguration,
+  initializeShellParsers,
+} from '../utils/shell-utils.js';
 import { isCommandAllowed } from '../utils/shell-permissions.js';
 import { ShellTool } from './shell.js';
 import { type Config } from '../config/config.js';
@@ -91,11 +94,18 @@ describe('ShellTool', () => {
       getEnableInteractiveShell: vi.fn().mockReturnValue(false),
       isInteractive: vi.fn().mockReturnValue(true),
       getShellToolInactivityTimeout: vi.fn().mockReturnValue(300000),
+      getShellConfiguration: vi.fn().mockImplementation(() =>
+        getShellConfiguration(),
+      ),
+      getShellGuidance: vi.fn().mockReturnValue(undefined),
+      getShellSearchCommand: vi.fn().mockReturnValue(undefined),
+      getShellSearchGuidance: vi.fn().mockReturnValue(undefined),
+      getShellToolGuidance: vi.fn().mockReturnValue(undefined),
     } as unknown as Config;
 
     shellTool = new ShellTool(mockConfig);
 
-    mockPlatform.mockReturnValue('linux');
+    mockPlatform.mockReturnValue('darwin');
     (vi.mocked(crypto.randomBytes) as Mock).mockReturnValue(
       Buffer.from('abcdef', 'hex'),
     );
@@ -569,6 +579,16 @@ describe('ShellTool', () => {
       mockPlatform.mockReturnValue('linux');
       const shellTool = new ShellTool(mockConfig);
       expect(shellTool.description).toMatchSnapshot();
+    });
+
+    it('should include tool guidance when configured', () => {
+      mockPlatform.mockReturnValue('linux');
+      (mockConfig.getShellToolGuidance as Mock).mockReturnValue({
+        grep: 'rg',
+        sed: 'sd',
+      });
+      const shellTool = new ShellTool(mockConfig);
+      expect(shellTool.description).toContain('Tools: grep→rg, sed→sd.');
     });
   });
 });

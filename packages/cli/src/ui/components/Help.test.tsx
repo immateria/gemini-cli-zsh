@@ -71,4 +71,28 @@ describe('Help Component', () => {
     expect(output).toContain('Page Up/Down');
     unmount();
   });
+
+  it('should render shell configuration when provided', () => {
+    const { lastFrame, unmount } = render(
+      <Help
+        commands={mockCommands}
+        shellInfo={{
+          executable: '/bin/zsh',
+          argsPrefix: ['-c'],
+          shell: 'zsh',
+          guidance: 'Use zsh syntax.',
+          searchCommand: 'rg',
+          searchGuidance: 'Prefer ripgrep.',
+          toolGuidance: { grep: 'rg', sed: 'sd' },
+        }}
+      />,
+    );
+    const output = lastFrame();
+
+    expect(output).toContain('Shell config: /bin/zsh -c (zsh)');
+    expect(output).toContain('Use zsh syntax.');
+    expect(output).toContain('Search: rg (Prefer ripgrep.)');
+    expect(output).toContain('Tools: grep→rg, sed→sd');
+    unmount();
+  });
 });

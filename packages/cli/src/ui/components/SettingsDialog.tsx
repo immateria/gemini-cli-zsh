@@ -34,6 +34,13 @@ import {
   getNestedValue,
   getEffectiveValue,
 } from '../../utils/settingsUtils.js';
+import {
+  resolveShellConfigurationOverrideFromSettings,
+  resolveShellGuidanceFromSettings,
+  resolveShellSearchCommandFromSettings,
+  resolveShellSearchGuidanceFromSettings,
+  resolveShellToolGuidanceFromSettings,
+} from '../../config/shellConfig.js';
 import { useVimMode } from '../contexts/VimModeContext.js';
 import { useKeypress } from '../hooks/useKeypress.js';
 import chalk from 'chalk';
@@ -194,6 +201,78 @@ export function SettingsDialog({
     setShowRestartPrompt(newRestartRequired.size > 0);
   }, [selectedScope, settings, globalPendingChanges]);
 
+  const applyShellRuntimeSettings = (settingsObject: Settings) => {
+    if (!config) {
+      return;
+    }
+    const mergedSettings = settings.merged;
+    const getEffectiveShellValue = (key: string) =>
+      getEffectiveValue(key, settingsObject, mergedSettings);
+    const argsPrefix = getEffectiveShellValue('tools.shell.argsPrefix');
+    const normalizedArgsPrefix = Array.isArray(argsPrefix)
+      ? argsPrefix.filter((arg) => typeof arg === 'string' && arg.length > 0)
+      : undefined;
+    const shellOverride = resolveShellConfigurationOverrideFromSettings({
+      ...mergedSettings,
+      tools: {
+        ...mergedSettings.tools,
+        shell: {
+          ...mergedSettings.tools?.shell,
+          executable: getEffectiveShellValue('tools.shell.executable'),
+          argsPrefix: normalizedArgsPrefix,
+          shellType: getEffectiveShellValue('tools.shell.shellType'),
+          profile: getEffectiveShellValue('tools.shell.profile'),
+        },
+      },
+    });
+    const shellGuidance = resolveShellGuidanceFromSettings({
+      ...mergedSettings,
+      tools: {
+        ...mergedSettings.tools,
+        shell: {
+          ...mergedSettings.tools?.shell,
+          guidance: getEffectiveShellValue('tools.shell.guidance'),
+        },
+      },
+    });
+    const shellSearchCommand = resolveShellSearchCommandFromSettings({
+      ...mergedSettings,
+      tools: {
+        ...mergedSettings.tools,
+        shell: {
+          ...mergedSettings.tools?.shell,
+          searchCommand: getEffectiveShellValue('tools.shell.searchCommand'),
+          profile: getEffectiveShellValue('tools.shell.profile'),
+        },
+      },
+    });
+    const shellSearchGuidance = resolveShellSearchGuidanceFromSettings({
+      ...mergedSettings,
+      tools: {
+        ...mergedSettings.tools,
+        shell: {
+          ...mergedSettings.tools?.shell,
+          searchGuidance: getEffectiveShellValue('tools.shell.searchGuidance'),
+        },
+      },
+    });
+    const shellToolGuidance = resolveShellToolGuidanceFromSettings({
+      ...mergedSettings,
+      tools: {
+        ...mergedSettings.tools,
+        shell: {
+          ...mergedSettings.tools?.shell,
+          toolGuidance: getEffectiveShellValue('tools.shell.toolGuidance'),
+        },
+      },
+    });
+    config.setShellConfigurationOverride(shellOverride);
+    config.setShellGuidance(shellGuidance);
+    config.setShellSearchCommand(shellSearchCommand);
+    config.setShellSearchGuidance(shellSearchGuidance);
+    config.setShellToolGuidance(shellToolGuidance);
+  };
+
   const generateSettingsItems = () => {
     const settingKeys = searchQuery ? filteredKeys : getDialogSettingKeys();
 
@@ -249,6 +328,9 @@ export function SettingsDialog({
               settings,
               selectedScope,
             );
+            if (key.startsWith('tools.shell.')) {
+              applyShellRuntimeSettings(immediateSettingsObject);
+            }
 
             // Special handling for vim mode to sync with VimModeContext
             if (key === 'general.vimMode' && newValue !== vimEnabled) {
@@ -384,6 +466,9 @@ export function SettingsDialog({
         settings,
         selectedScope,
       );
+      if (key.startsWith('tools.shell.')) {
+        applyShellRuntimeSettings(immediateSettingsObject);
+      }
 
       // Remove from modified sets if present
       setModifiedSettings((prev) => {
@@ -778,6 +863,9 @@ export function SettingsDialog({
                 settings,
                 selectedScope,
               );
+              if (currentSetting.value.startsWith('tools.shell.')) {
+                applyShellRuntimeSettings(immediateSettingsObject);
+              }
 
               // Remove from global pending changes if present
               setGlobalPendingChanges((prev) => {
