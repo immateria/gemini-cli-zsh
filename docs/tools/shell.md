@@ -160,6 +160,23 @@ only applies when `tools.shell.enableInteractiveShell` is enabled.**
 }
 ```
 
+### Adding shell guidance
+
+You can add optional guidance that is surfaced in the shell tool description
+and system prompt. This is useful for reminding Gemini about non-POSIX shells.
+
+**Example `settings.json`:**
+
+```json
+{
+  "tools": {
+    "shell": {
+      "guidance": "Use nushell syntax; avoid POSIX operators like &&/||."
+    }
+  }
+}
+```
+
 ## Interactive commands
 
 The `run_shell_command` tool now supports interactive commands by integrating a
