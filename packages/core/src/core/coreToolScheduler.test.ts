@@ -46,6 +46,7 @@ import * as modifiableToolModule from '../tools/modifiable-tool.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { isShellInvocationAllowlisted } from '../utils/shell-permissions.js';
+import { getShellConfiguration } from '../utils/shell-utils.js';
 import {
   DEFAULT_GEMINI_MODEL,
   PREVIEW_GEMINI_MODEL,
@@ -1513,6 +1514,7 @@ describe('CoreToolScheduler request queueing', () => {
           params: { command: 'git status && rm -rf /tmp/should-not-run' },
         } as unknown as AnyToolInvocation,
         ['run_shell_command(git)'],
+        getShellConfiguration(),
       ),
     ).toBe(false);
 

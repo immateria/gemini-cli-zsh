@@ -185,6 +185,22 @@ describe('escapeShellArg', () => {
     });
   });
 
+  describe('POSIX (generic)', () => {
+    it('should use shell-quote for escaping', () => {
+      mockQuote.mockReturnValueOnce("'escaped value'");
+      const result = escapeShellArg('raw value', 'posix');
+      expect(mockQuote).toHaveBeenCalledWith(['raw value']);
+      expect(result).toBe("'escaped value'");
+    });
+  });
+
+  describe('Other shells', () => {
+    it('should return the raw value without escaping', () => {
+      const result = escapeShellArg('raw value', 'other');
+      expect(result).toBe('raw value');
+    });
+  });
+
   describe('Windows', () => {
     describe('when shell is cmd.exe', () => {
       it('should wrap simple arguments in double quotes', () => {
@@ -242,12 +258,41 @@ describe('getShellConfiguration', () => {
     expect(config.shell).toBe('bash');
   });
 
-  it('should return bash configuration on macOS (darwin)', () => {
+  it('should return zsh configuration on macOS (darwin)', () => {
     mockPlatform.mockReturnValue('darwin');
     const config = getShellConfiguration();
-    expect(config.executable).toBe('bash');
+    expect(config.executable).toBe('zsh');
     expect(config.argsPrefix).toEqual(['-c']);
-    expect(config.shell).toBe('bash');
+    expect(config.shell).toBe('zsh');
+  });
+
+  it('should allow overriding executable and argsPrefix', () => {
+    mockPlatform.mockReturnValue('linux');
+    const config = getShellConfiguration({
+      executable: '/bin/zsh',
+      argsPrefix: ['-c'],
+    });
+    expect(config.executable).toBe('/bin/zsh');
+    expect(config.argsPrefix).toEqual(['-c']);
+    expect(config.shell).toBe('zsh');
+  });
+
+  it('should infer non-posix shells from the executable override', () => {
+    mockPlatform.mockReturnValue('linux');
+    const config = getShellConfiguration({
+      executable: '/usr/bin/nu',
+      argsPrefix: ['-c'],
+    });
+    expect(config.shell).toBe('other');
+  });
+
+  it('should infer non-posix shells on Windows executables', () => {
+    mockPlatform.mockReturnValue('win32');
+    const config = getShellConfiguration({
+      executable: 'C:\\Program Files\\Nu\\nu.exe',
+      argsPrefix: ['-c'],
+    });
+    expect(config.shell).toBe('other');
   });
 
   describe('on Windows', () => {
