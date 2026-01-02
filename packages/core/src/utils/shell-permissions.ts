@@ -260,7 +260,13 @@ export function isShellInvocationAllowlisted(
     shellConfiguration,
   );
   if (!parseResult || parseResult.hasError) {
-    return false;
+    const shellType = shellConfiguration?.shell;
+    const shouldFallback = shellType
+      ? shellType !== 'bash' && shellType !== 'powershell'
+      : false;
+    if (!shouldFallback) {
+      return false;
+    }
   }
 
   const normalize = (cmd: string): string => cmd.trim().replace(/\s+/g, ' ');
