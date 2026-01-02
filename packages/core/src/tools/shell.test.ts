@@ -580,5 +580,15 @@ describe('ShellTool', () => {
       const shellTool = new ShellTool(mockConfig);
       expect(shellTool.description).toMatchSnapshot();
     });
+
+    it('should include tool guidance when configured', () => {
+      mockPlatform.mockReturnValue('linux');
+      (mockConfig.getShellToolGuidance as Mock).mockReturnValue({
+        grep: 'rg',
+        sed: 'sd',
+      });
+      const shellTool = new ShellTool(mockConfig);
+      expect(shellTool.description).toContain('Tools: grep→rg, sed→sd.');
+    });
   });
 });

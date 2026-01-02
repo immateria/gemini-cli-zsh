@@ -444,6 +444,15 @@ function getShellToolDescription(config: Config): string {
   const defaultGuidance = getShellGuidance(shell);
   const guidance = customGuidance ?? defaultGuidance;
   const guidanceSuffix = guidance ? ` Guidance: ${guidance}` : '';
+  const toolGuidanceEntries = Object.entries(
+    config.getShellToolGuidance() ?? {},
+  );
+  const toolGuidanceSuffix =
+    toolGuidanceEntries.length > 0
+      ? ` Tools: ${toolGuidanceEntries
+          .map(([tool, replacement]) => `${tool}→${replacement}`)
+          .join(', ')}.`
+      : '';
   const returnedInfo = `
 
       The following information is returned:
@@ -459,7 +468,7 @@ function getShellToolDescription(config: Config): string {
       Process Group PGID: Process group started or \`(none)\``;
 
   if (shell === 'powershell') {
-    return `This tool executes a given shell command as \`${invocation}\`. ${shellContext} Command can start background processes using PowerShell constructs such as \`Start-Process -NoNewWindow\` or \`Start-Job\`.${guidanceSuffix}${returnedInfo}`;
+    return `This tool executes a given shell command as \`${invocation}\`. ${shellContext} Command can start background processes using PowerShell constructs such as \`Start-Process -NoNewWindow\` or \`Start-Job\`.${guidanceSuffix}${toolGuidanceSuffix}${returnedInfo}`;
   }
 
   const syntaxGuidance =
@@ -476,7 +485,7 @@ function getShellToolDescription(config: Config): string {
       ? ' Background process handling depends on the shell configuration.'
       : ' Command can start background processes using `&`.';
 
-  return `This tool executes a given shell command as \`${invocation}\`. ${shellContext}${backgroundGuidance} Command is executed as a subprocess that leads its own process group. Command process group can be terminated as \`kill -- -PGID\` or signaled as \`kill -s SIGNAL -- -PGID\`.${syntaxGuidance}${guidanceSuffix}${returnedInfo}`;
+  return `This tool executes a given shell command as \`${invocation}\`. ${shellContext}${backgroundGuidance} Command is executed as a subprocess that leads its own process group. Command process group can be terminated as \`kill -- -PGID\` or signaled as \`kill -s SIGNAL -- -PGID\`.${syntaxGuidance}${guidanceSuffix}${toolGuidanceSuffix}${returnedInfo}`;
 }
 
 function getCommandDescription(config: Config): string {

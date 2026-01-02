@@ -327,7 +327,7 @@ Gemini CLI.
 
 - **`!<shell_command>`**
   - **Description:** Execute the given `<shell_command>` using the configured
-    shell (defaults to `bash -c` on Linux/macOS and
+    shell (defaults to `bash -c` on Linux, `zsh -c` on macOS, and
     `powershell.exe -NoProfile -Command` on Windows unless overridden). Any
     output or errors from the command are displayed in the terminal.
   - **Examples:**

@@ -11,9 +11,9 @@ command, including interactive commands that require user input (e.g., `vim`,
 `true`.
 
 By default, Windows uses `powershell.exe -NoProfile -Command` (unless you
-explicitly point `ComSpec` at another shell) and other platforms use `bash -c`.
-You can override the shell executable and arguments in settings (for example
-`zsh`, `nu`, or `elvish`).
+explicitly point `ComSpec` at another shell), macOS uses `zsh -c`, and other
+platforms use `bash -c`. You can override the shell executable and arguments in
+settings (for example `zsh`, `nu`, or `elvish`).
 
 ### Arguments
 
@@ -28,10 +28,10 @@ You can override the shell executable and arguments in settings (for example
 
 ## How to use `run_shell_command` with the Gemini CLI
 
-When using `run_shell_command`, the command is executed as a subprocess.
-On POSIX-style shells, you can start background processes using `&`. On
-non-POSIX shells, background behavior depends on the shell. The tool returns
-detailed information about the execution, including:
+When using `run_shell_command`, the command is executed as a subprocess. On
+POSIX-style shells, you can start background processes using `&`. On non-POSIX
+shells, background behavior depends on the shell. The tool returns detailed
+information about the execution, including:
 
 - `Command`: The command that was executed.
 - `Directory`: The directory where the command was run.
@@ -40,7 +40,8 @@ detailed information about the execution, including:
 - `Error`: Any error message reported by the subprocess.
 - `Exit Code`: The exit code of the command.
 - `Signal`: The signal number if the command was terminated by a signal.
-- `Background PIDs`: A list of PIDs for any background processes started (POSIX shells only).
+- `Background PIDs`: A list of PIDs for any background processes started (POSIX
+  shells only).
 
 Usage:
 
@@ -162,8 +163,8 @@ only applies when `tools.shell.enableInteractiveShell` is enabled.**
 
 ### Adding shell guidance
 
-You can add optional guidance that is surfaced in the shell tool description
-and system prompt. This is useful for reminding Gemini about non-POSIX shells.
+You can add optional guidance that is surfaced in the shell tool description and
+system prompt. This is useful for reminding Gemini about non-POSIX shells.
 
 **Example `settings.json`:**
 
