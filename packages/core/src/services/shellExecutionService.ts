@@ -12,7 +12,11 @@ import { TextDecoder } from 'node:util';
 import os from 'node:os';
 import type { IPty } from '@lydell/node-pty';
 import { getCachedEncodingForBuffer } from '../utils/systemEncoding.js';
-import { getShellConfiguration, type ShellType } from '../utils/shell-utils.js';
+import {
+  getShellConfiguration,
+  type ShellConfiguration,
+  type ShellType,
+} from '../utils/shell-utils.js';
 import { isBinary } from '../utils/textUtils.js';
 import pkg from '@xterm/headless';
 import {
@@ -84,6 +88,7 @@ export interface ShellExecutionConfig {
   showColor?: boolean;
   defaultFg?: string;
   defaultBg?: string;
+  shellConfigurationOverride?: Partial<ShellConfiguration>;
   sanitizationConfig: EnvironmentSanitizationConfig;
   // Used for testing
   disableDynamicLineTrimming?: boolean;
@@ -245,7 +250,9 @@ export class ShellExecutionService {
   ): ShellExecutionHandle {
     try {
       const isWindows = os.platform() === 'win32';
-      const { executable, argsPrefix, shell } = getShellConfiguration();
+      const { executable, argsPrefix, shell } = getShellConfiguration(
+        shellExecutionConfig.shellConfigurationOverride,
+      );
       const guardedCommand = ensurePromptvarsDisabled(commandToExecute, shell);
       const spawnArgs = [...argsPrefix, guardedCommand];
 
@@ -460,7 +467,9 @@ export class ShellExecutionService {
     try {
       const cols = shellExecutionConfig.terminalWidth ?? 80;
       const rows = shellExecutionConfig.terminalHeight ?? 30;
-      const { executable, argsPrefix, shell } = getShellConfiguration();
+      const { executable, argsPrefix, shell } = getShellConfiguration(
+        shellExecutionConfig.shellConfigurationOverride,
+      );
       const guardedCommand = ensurePromptvarsDisabled(commandToExecute, shell);
       const args = [...argsPrefix, guardedCommand];
 

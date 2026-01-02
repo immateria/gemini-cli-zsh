@@ -47,6 +47,13 @@ import { RESUME_LATEST } from '../utils/sessionUtils.js';
 import { isWorkspaceTrusted } from './trustedFolders.js';
 import { createPolicyEngineConfig } from './policy.js';
 import { ExtensionManager } from './extension-manager.js';
+import {
+  resolveShellConfigurationOverrideFromSettings,
+  resolveShellGuidanceFromSettings,
+  resolveShellSearchCommandFromSettings,
+  resolveShellSearchGuidanceFromSettings,
+  resolveShellToolGuidanceFromSettings,
+} from './shellConfig.js';
 import type { ExtensionEvents } from '@google/gemini-cli-core/src/utils/extensionLoader.js';
 import { requestConsentNonInteractive } from './extensions/consent.js';
 import { promptForSetting } from './extensions/extensionSettings.js';
@@ -607,6 +614,16 @@ export async function loadCliConfig(
 
   const ptyInfo = await getPty();
 
+  const shellConfigurationOverride =
+    resolveShellConfigurationOverrideFromSettings(settings);
+  const shellGuidance = resolveShellGuidanceFromSettings(settings);
+  const shellSearchCommand =
+    resolveShellSearchCommandFromSettings(settings);
+  const shellSearchGuidance =
+    resolveShellSearchGuidanceFromSettings(settings);
+  const shellToolGuidance =
+    resolveShellToolGuidanceFromSettings(settings);
+
   return new Config({
     sessionId,
     embeddingModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
@@ -679,10 +696,15 @@ export async function loadCliConfig(
     trustedFolder,
     useRipgrep: settings.tools?.useRipgrep,
     enableInteractiveShell:
-      settings.tools?.shell?.enableInteractiveShell ?? true,
+    settings.tools?.shell?.enableInteractiveShell ?? true,
     shellToolInactivityTimeout: settings.tools?.shell?.inactivityTimeout,
+    shellConfigurationOverride,
+    shellGuidance,
+    shellSearchCommand,
+    shellSearchGuidance,
+    shellToolGuidance,
     enableShellOutputEfficiency:
-      settings.tools?.shell?.enableShellOutputEfficiency ?? true,
+    settings.tools?.shell?.enableShellOutputEfficiency ?? true,
     skipNextSpeakerCheck: settings.model?.skipNextSpeakerCheck,
     enablePromptCompletion: settings.general?.enablePromptCompletion ?? false,
     truncateToolOutputThreshold: settings.tools?.truncateToolOutputThreshold,

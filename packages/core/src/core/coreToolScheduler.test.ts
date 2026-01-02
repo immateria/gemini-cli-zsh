@@ -39,6 +39,12 @@ import {
 } from '../test-utils/mock-tool.js';
 import * as modifiableToolModule from '../tools/modifiable-tool.js';
 import { isShellInvocationAllowlisted } from '../utils/shell-permissions.js';
+import { getShellConfiguration } from '../utils/shell-utils.js';
+import {
+  DEFAULT_GEMINI_MODEL,
+  PREVIEW_GEMINI_MODEL,
+} from '../config/models.js';
+
 import { DEFAULT_GEMINI_MODEL } from '../config/models.js';
 
 vi.mock('fs/promises', () => ({
@@ -1172,6 +1178,7 @@ describe('CoreToolScheduler request queueing', () => {
           params: { command: 'git status && rm -rf /tmp/should-not-run' },
         } as unknown as AnyToolInvocation,
         ['run_shell_command(git)'],
+        getShellConfiguration(),
       ),
     ).toBe(false);
 

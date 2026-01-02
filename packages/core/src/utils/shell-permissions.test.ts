@@ -517,4 +517,19 @@ describe('isShellInvocationAllowlisted', () => {
       ]),
     ).toBe(true);
   });
+
+  it('should return false when parsing fails for non-bash shells', () => {
+    const invocation = createInvocation('git status && rm -rf /tmp/unsafe');
+    expect(
+      isShellInvocationAllowlisted(
+        invocation,
+        ['run_shell_command(git)'],
+        {
+          executable: 'fish',
+          argsPrefix: ['-c'],
+          shell: 'other',
+        },
+      ),
+    ).toBe(false);
+  });
 });

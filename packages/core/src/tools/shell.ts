@@ -107,7 +107,9 @@ export class ShellToolInvocation extends BaseToolInvocation<
     _abortSignal: AbortSignal,
   ): Promise<ToolCallConfirmationDetails | false> {
     const command = stripShellWrapper(this.params.command);
-    const rootCommands = [...new Set(getCommandRoots(command))];
+    const rootCommands = [
+      ...new Set(getCommandRoots(command, this.config.getShellConfiguration())),
+    ];
 
     // In non-interactive mode, we need to prevent the tool from hanging while
     // waiting for user input. If a tool is not fully allowed (e.g. via
@@ -172,6 +174,9 @@ export class ShellToolInvocation extends BaseToolInvocation<
     const tempFilePath = path.join(os.tmpdir(), tempFileName);
 
     const timeoutMs = this.config.getShellToolInactivityTimeout();
+    const shellType = this.config.getShellConfiguration().shell;
+    const supportsPosixBackground =
+      shellType === 'bash' || shellType === 'zsh' || shellType === 'posix';
     const timeoutController = new AbortController();
     let timeoutTimer: NodeJS.Timeout | undefined;
 
@@ -182,14 +187,15 @@ export class ShellToolInvocation extends BaseToolInvocation<
 
     try {
       // pgrep is not available on Windows, so we can't get background PIDs
-      const commandToExecute = isWindows
-        ? strippedCommand
-        : (() => {
+      const collectBackgroundPids = !isWindows && supportsPosixBackground;
+      const commandToExecute = collectBackgroundPids
+        ? (() => {
             // wrap command to append subprocess pids (via pgrep) to temporary file
             let command = strippedCommand.trim();
             if (!command.endsWith('&')) command += ';';
             return `{ ${command} }; __code=$?; pgrep -g 0 >${tempFilePath} 2>&1; exit $__code;`;
-          })();
+          })()
+        : strippedCommand;
 
       const cwd = this.params.dir_path
         ? path.resolve(this.config.getTargetDir(), this.params.dir_path)
@@ -278,7 +284,7 @@ export class ShellToolInvocation extends BaseToolInvocation<
       const result = await resultPromise;
 
       const backgroundPIDs: number[] = [];
-      if (os.platform() !== 'win32') {
+      if (collectBackgroundPids) {
         if (fs.existsSync(tempFilePath)) {
           const pgrepLines = fs
             .readFileSync(tempFilePath, 'utf8')
@@ -411,11 +417,56 @@ export class ShellToolInvocation extends BaseToolInvocation<
     }
 
     const invocation = { params: { command } } as unknown as AnyToolInvocation;
-    return isShellInvocationAllowlisted(invocation, allowedTools);
+    return isShellInvocationAllowlisted(
+      invocation,
+      allowedTools,
+      this.config.getShellConfiguration(),
+    );
   }
 }
 
-function getShellToolDescription(): string {
+function getShellGuidance(shell: string): string {
+  switch (shell) {
+    case 'powershell':
+      return 'Use PowerShell syntax and cmdlets (e.g., Get-ChildItem, Select-Object).';
+    case 'zsh':
+      return 'Use zsh syntax (e.g., glob qualifiers, array indexing) and avoid bash-only builtins.';
+    case 'posix':
+      return 'Use POSIX sh-compatible syntax; avoid bash-specific features.';
+    case 'other':
+      return 'Use the configured shell’s native syntax; do not assume bash semantics.';
+    default:
+      return '';
+  }
+}
+
+function getShellToolDescription(config: Config): string {
+  const { executable, argsPrefix, shell } = config.getShellConfiguration();
+  const invocation = [executable, ...argsPrefix, '<command>']
+    .filter(Boolean)
+    .join(' ');
+  const shellLabel =
+    shell === 'posix'
+      ? 'POSIX-compatible'
+      : shell === 'zsh'
+        ? 'zsh'
+        : shell === 'other'
+          ? 'non-POSIX'
+          : shell;
+  const shellContext = `Configured shell: \`${executable}\` (${shellLabel}).`;
+  const customGuidance = config.getShellGuidance();
+  const defaultGuidance = getShellGuidance(shell);
+  const guidance = customGuidance ?? defaultGuidance;
+  const guidanceSuffix = guidance ? ` Guidance: ${guidance}` : '';
+  const toolGuidanceEntries = Object.entries(
+    config.getShellToolGuidance() ?? {},
+  );
+  const toolGuidanceSuffix =
+    toolGuidanceEntries.length > 0
+      ? ` Tools: ${toolGuidanceEntries
+          .map(([tool, replacement]) => `${tool}→${replacement}`)
+          .join(', ')}.`
+      : '';
   const returnedInfo = `
 
       The following information is returned:
@@ -430,19 +481,33 @@ function getShellToolDescription(): string {
       Background PIDs: List of background processes started or \`(none)\`.
       Process Group PGID: Process group started or \`(none)\``;
 
-  if (os.platform() === 'win32') {
-    return `This tool executes a given shell command as \`powershell.exe -NoProfile -Command <command>\`. Command can start background processes using PowerShell constructs such as \`Start-Process -NoNewWindow\` or \`Start-Job\`.${returnedInfo}`;
-  } else {
-    return `This tool executes a given shell command as \`bash -c <command>\`. Command can start background processes using \`&\`. Command is executed as a subprocess that leads its own process group. Command process group can be terminated as \`kill -- -PGID\` or signaled as \`kill -s SIGNAL -- -PGID\`.${returnedInfo}`;
+  if (shell === 'powershell') {
+    return `This tool executes a given shell command as \`${invocation}\`. ${shellContext} Command can start background processes using PowerShell constructs such as \`Start-Process -NoNewWindow\` or \`Start-Job\`.${guidanceSuffix}${toolGuidanceSuffix}${returnedInfo}`;
   }
+
+  const syntaxGuidance =
+    shell === 'bash'
+      ? ''
+      : shell === 'zsh'
+        ? ' This shell is zsh; avoid bash-only constructs and prefer zsh-compatible syntax.'
+        : shell === 'posix'
+          ? ' This shell is POSIX-style; avoid bash-specific features when possible.'
+          : ' This shell is non-POSIX; do not assume bash syntax and use the shell’s native constructs.';
+
+  const backgroundGuidance =
+    shell === 'other'
+      ? ' Background process handling depends on the shell configuration.'
+      : ' Command can start background processes using `&`.';
+
+  return `This tool executes a given shell command as \`${invocation}\`. ${shellContext}${backgroundGuidance} Command is executed as a subprocess that leads its own process group. Command process group can be terminated as \`kill -- -PGID\` or signaled as \`kill -s SIGNAL -- -PGID\`.${syntaxGuidance}${guidanceSuffix}${toolGuidanceSuffix}${returnedInfo}`;
 }
 
-function getCommandDescription(): string {
-  if (os.platform() === 'win32') {
-    return 'Exact command to execute as `powershell.exe -NoProfile -Command <command>`';
-  } else {
-    return 'Exact bash command to execute as `bash -c <command>`';
-  }
+function getCommandDescription(config: Config): string {
+  const { executable, argsPrefix } = config.getShellConfiguration();
+  const invocation = [executable, ...argsPrefix, '<command>']
+    .filter(Boolean)
+    .join(' ');
+  return `Exact command to execute as \`${invocation}\``;
 }
 
 export class ShellTool extends BaseDeclarativeTool<
@@ -463,14 +528,14 @@ export class ShellTool extends BaseDeclarativeTool<
     super(
       ShellTool.Name,
       'Shell',
-      getShellToolDescription(),
+      getShellToolDescription(config),
       Kind.Execute,
       {
         type: 'object',
         properties: {
           command: {
             type: 'string',
-            description: getCommandDescription(),
+            description: getCommandDescription(config),
           },
           description: {
             type: 'string',
@@ -508,7 +573,12 @@ export class ShellTool extends BaseDeclarativeTool<
       }
       return commandCheck.reason;
     }
-    if (getCommandRoots(params.command).length === 0) {
+    if (
+      getCommandRoots(
+        params.command,
+        this.config.getShellConfiguration(),
+      ).length === 0
+    ) {
       return 'Could not identify command root to obtain permission from user.';
     }
     if (params.dir_path) {
