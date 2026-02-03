@@ -8,6 +8,8 @@ import type React from 'react';
 import { Box, Text } from 'ink';
 import { theme } from '../semantic-colors.js';
 import { type SlashCommand, CommandKind } from '../commands/types.js';
+import { KEYBOARD_SHORTCUTS_URL } from '../constants.js';
+import { sanitizeForDisplay } from '../utils/textUtils.js';
 
 interface Help {
   commands: readonly SlashCommand[];
@@ -108,7 +110,8 @@ export const Help: React.FC<Help> = ({ commands, shellInfo }) => (
             {command.kind === CommandKind.MCP_PROMPT && (
               <Text color={theme.text.secondary}> [MCP]</Text>
             )}
-            {command.description && ' - ' + command.description}
+            {command.description &&
+              ' - ' + sanitizeForDisplay(command.description, 100)}
           </Text>
           {command.subCommands &&
             command.subCommands
@@ -119,7 +122,8 @@ export const Help: React.FC<Help> = ({ commands, shellInfo }) => (
                     {'   '}
                     {subCommand.name}
                   </Text>
-                  {subCommand.description && ' - ' + subCommand.description}
+                  {subCommand.description &&
+                    ' - ' + sanitizeForDisplay(subCommand.description, 100)}
                 </Text>
               ))}
         </Box>
@@ -176,7 +180,7 @@ export const Help: React.FC<Help> = ({ commands, shellInfo }) => (
     </Text>
     <Text color={theme.text.primary}>
       <Text bold color={theme.text.accent}>
-        {process.platform === 'darwin' ? 'Ctrl+X / Meta+Enter' : 'Ctrl+X'}
+        Ctrl+X
       </Text>{' '}
       - Open input in external editor
     </Text>
@@ -220,7 +224,7 @@ export const Help: React.FC<Help> = ({ commands, shellInfo }) => (
     <Text color={theme.text.primary}>
       For a full list of shortcuts, see{' '}
       <Text bold color={theme.text.accent}>
-        docs/cli/keyboard-shortcuts.md
+        {KEYBOARD_SHORTCUTS_URL}
       </Text>
     </Text>
   </Box>

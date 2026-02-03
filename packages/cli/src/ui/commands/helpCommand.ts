@@ -34,6 +34,6 @@ export const helpCommand: SlashCommand = {
       shellInfo,
     };
 
-    context.ui.addItem(helpItem, Date.now());
+    context.ui.addItem(helpItem);
   },
 };
