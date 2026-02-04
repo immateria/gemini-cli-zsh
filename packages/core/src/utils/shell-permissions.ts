@@ -259,14 +259,10 @@ export function isShellInvocationAllowlisted(
     command,
     shellConfiguration,
   );
+  // If parsing fails, be conservative and reject - we can't safely validate
+  // unparsed commands against allowlist patterns
   if (!parseResult || parseResult.hasError) {
-    const shellType = shellConfiguration?.shell;
-    const shouldFallback = shellType
-      ? shellType !== 'bash' && shellType !== 'powershell'
-      : false;
-    if (!shouldFallback) {
-      return false;
-    }
+    return false;
   }
 
   const normalize = (cmd: string): string => cmd.trim().replace(/\s+/g, ' ');

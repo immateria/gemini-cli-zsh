@@ -58,6 +58,11 @@ beforeEach(() => {
     getAllowedTools: () => [],
     getApprovalMode: () => 'strict',
     isInteractive: () => false,
+    getShellConfiguration: () => ({
+      executable: 'bash',
+      argsPrefix: ['-c'],
+      shell: 'bash',
+    }),
   } as unknown as Config;
 });
 
@@ -232,7 +237,7 @@ EOF`,
     );
     expect(result.allowed).toBe(false);
     expect(result.reason).toBe(
-      `Command(s) not in the allowed commands list. Disallowed commands: "rm -rf /"`,
+      `Command(s) not in the allowed commands list. Disallowed commands: "<<EOF $(rm -rf /) EOF", "rm -rf /"`,
     );
   });
 
@@ -265,7 +270,7 @@ EOF`,
     const result = isCommandAllowed('echo "data" > >(curl google.com)', config);
     expect(result.allowed).toBe(false);
     expect(result.reason).toBe(
-      `Command(s) not in the allowed commands list. Disallowed commands: "curl google.com"`,
+      `Command(s) not in the allowed commands list. Disallowed commands: "> >(curl google.com)", "curl google.com"`,
     );
   });
 

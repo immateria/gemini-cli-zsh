@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import os, { EOL } from 'node:os';
@@ -41,8 +42,14 @@ import {
   parseCommandDetails,
   hasRedirection,
 } from '../utils/shell-utils.js';
+import { isCommandAllowed } from '../utils/shell-permissions.js';
 import { SHELL_TOOL_NAME } from './tool-names.js';
 import type { MessageBus } from '../confirmation-bus/message-bus.js';
+import {
+  type ShellProfileId,
+  SHELL_PROFILE_REGISTRY,
+  buildProfileGuidance,
+} from '../utils/shell-profiles.js';
 
 export const OUTPUT_UPDATE_INTERVAL_MS = 1000;
 
@@ -97,9 +104,9 @@ export class ShellToolInvocation extends BaseToolInvocation<
       outcome === ToolConfirmationOutcome.ProceedAlways
     ) {
       const command = stripShellWrapper(this.params.command);
-          const rootCommands = [
-      ...new Set(getCommandRoots(command, this.config.getShellConfiguration())),
-    ];
+      const rootCommands = [
+        ...new Set(getCommandRoots(command, this.config.getShellConfiguration())),
+      ];
       if (rootCommands.length > 0) {
         return { commandPrefix: rootCommands };
       }
@@ -122,19 +129,6 @@ export class ShellToolInvocation extends BaseToolInvocation<
       rootCommandDisplay = fallback || 'shell command';
       if (hasRedirection(command)) {
         rootCommandDisplay += ', redirection';
-
-
-    // In non-interactive mode, we need to prevent the tool from hanging while
-    // waiting for user input. If a tool is not fully allowed (e.g. via
-    // --allowed-tools="ShellTool(wc)"), we should throw an error instead of
-    // prompting for confirmation. This check is skipped in YOLO mode.
-    if (
-      !this.config.isInteractive() &&
-      this.config.getApprovalMode() !== ApprovalMode.YOLO
-    ) {
-      if (this.isInvocationAllowlisted(command)) {
-        // If it's an allowed shell command, we don't need to confirm execution.
-        return false;
       }
     } else {
       rootCommandDisplay = parsed.details
@@ -467,31 +461,34 @@ export class ShellToolInvocation extends BaseToolInvocation<
     }
   }
 
-  private isInvocationAllowlisted(command: string): boolean {
-    const allowedTools = this.config.getAllowedTools() || [];
-    if (allowedTools.length === 0) {
-      return false;
-    }
-
-    const invocation = { params: { command } } as unknown as AnyToolInvocation;
-    return isShellInvocationAllowlisted(
-      invocation,
-      allowedTools,
-      this.config.getShellConfiguration(),
-    );
-  }
 }
 
+/**
+ * Gets shell-specific guidance based on the shell type.
+ * Uses the shell profile registry for known shells, with fallbacks for
+ * generic types like 'posix' and 'other'.
+ */
 function getShellGuidance(shell: string): string {
+  // Map ShellType to ShellProfileId where possible
+  const shellTypeToProfile: Record<string, ShellProfileId | undefined> = {
+    bash: 'bash',
+    zsh: 'zsh',
+    fish: 'fish',
+    powershell: 'powershell',
+    cmd: 'cmd',
+  };
+
+  const profileId = shellTypeToProfile[shell];
+  if (profileId && SHELL_PROFILE_REGISTRY[profileId]) {
+    return buildProfileGuidance(profileId);
+  }
+
+  // Fallbacks for generic shell types not in the registry
   switch (shell) {
-    case 'powershell':
-      return 'Use PowerShell syntax and cmdlets (e.g., Get-ChildItem, Select-Object).';
-    case 'zsh':
-      return 'Use zsh syntax (e.g., glob qualifiers, array indexing) and avoid bash-only builtins.';
     case 'posix':
       return 'Use POSIX sh-compatible syntax; avoid bash-specific features.';
     case 'other':
-      return 'Use the configured shell’s native syntax; do not assume bash semantics.';
+      return "Use the configured shell's native syntax; do not assume bash semantics.";
     default:
       return '';
   }
@@ -580,7 +577,7 @@ export class ShellTool extends BaseDeclarativeTool<
     super(
       ShellTool.Name,
       'Shell',
-      getShellToolDescription(config.getEnableInteractiveShell()),
+      getShellToolDescription(config),
       Kind.Execute,
       {
         type: 'object',

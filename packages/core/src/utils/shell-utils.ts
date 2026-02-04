@@ -23,8 +23,15 @@ export const SHELL_TOOL_NAMES = ['run_shell_command', 'ShellTool'];
 
 /**
  * An identifier for the shell type.
+ * - 'bash': Bourne Again Shell (default on most Linux)
+ * - 'zsh': Z Shell (default on macOS)
+ * - 'fish': Friendly Interactive Shell (non-POSIX, unique syntax)
+ * - 'posix': Generic POSIX-compatible shell (sh, dash, ash)
+ * - 'powershell': Windows PowerShell or PowerShell Core
+ * - 'cmd': Windows Command Prompt
+ * - 'other': Non-POSIX shells like nushell, elvish, xonsh
  */
-export type ShellType = 'cmd' | 'powershell' | 'bash' | 'zsh' | 'posix' | 'other';
+export type ShellType = 'cmd' | 'powershell' | 'bash' | 'zsh' | 'fish' | 'posix' | 'other';
 
 /**
  * Defines the configuration required to execute a command string within a specific shell.
@@ -524,7 +531,10 @@ function inferShellTypeFromExecutable(
     return null;
   }
 
-  const basename = path.basename(executable).toLowerCase();
+  // Handle both Unix and Windows path separators for cross-platform compatibility
+  // path.basename only works with the platform's native separator
+  const lastSlash = Math.max(executable.lastIndexOf('/'), executable.lastIndexOf('\\'));
+  const basename = (lastSlash >= 0 ? executable.slice(lastSlash + 1) : executable).toLowerCase();
   const normalized = basename.endsWith('.exe')
     ? basename.slice(0, -4)
     : basename;
@@ -545,7 +555,10 @@ function inferShellTypeFromExecutable(
   ) {
     return 'posix';
   }
-  if (normalized === 'fish' || normalized === 'nu' || normalized === 'elvish') {
+  if (normalized === 'fish') {
+    return 'fish';
+  }
+  if (normalized === 'nu' || normalized === 'elvish' || normalized === 'xonsh') {
     return 'other';
   }
 
@@ -608,23 +621,23 @@ export function getShellConfiguration(
         } as ShellConfiguration;
       })()
     : os.platform() === 'darwin'
-      ? {
+      ? ({
           executable: 'zsh',
           argsPrefix: ['-c'],
           shell: 'zsh',
-        }
-      : {
+        } as ShellConfiguration)
+      : ({
           executable: 'bash',
           argsPrefix: ['-c'],
           shell: 'bash',
-        };
+        } as ShellConfiguration);
 
   if (!override) {
     return baseConfig;
   }
 
   const inferredShell = inferShellTypeFromExecutable(override.executable);
-  const shell = override.shell ?? inferredShell ?? baseConfig.shell;
+  const shell: ShellType = (override.shell ?? inferredShell ?? baseConfig.shell) as ShellType;
 
   return {
     ...baseConfig,

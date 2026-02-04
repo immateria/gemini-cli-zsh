@@ -1089,14 +1089,14 @@ const SETTINGS_SCHEMA = {
             description:
               'Quickly switch between preset shell configurations (e.g., zsh, nushell).',
             showInDialog: true,
-            enum: [
-              'bash',
-              'zsh',
-              'fish',
-              'nushell',
-              'elvish',
-              'powershell',
-              'cmd',
+            options: [
+              { value: 'bash', label: 'Bash' },
+              { value: 'zsh', label: 'Zsh' },
+              { value: 'fish', label: 'Fish' },
+              { value: 'nushell', label: 'Nushell' },
+              { value: 'elvish', label: 'Elvish' },
+              { value: 'powershell', label: 'PowerShell' },
+              { value: 'cmd', label: 'CMD' },
             ],
           },
           shellType: {
@@ -1106,9 +1106,17 @@ const SETTINGS_SCHEMA = {
             requiresRestart: false,
             default: undefined as string | undefined,
             description:
-              'Shell family used for parsing/escaping. Use "zsh" for zsh, "posix" for sh-compatible shells, or "other" for shells like nushell or elvish.',
+              'Shell family used for parsing/escaping. Use "fish" for fish, "zsh" for zsh, "posix" for sh-compatible shells, or "other" for shells like nushell or elvish.',
             showInDialog: false,
-            enum: ['bash', 'zsh', 'posix', 'powershell', 'cmd', 'other'],
+            options: [
+              { value: 'bash', label: 'Bash' },
+              { value: 'zsh', label: 'Zsh' },
+              { value: 'fish', label: 'Fish' },
+              { value: 'posix', label: 'POSIX' },
+              { value: 'powershell', label: 'PowerShell' },
+              { value: 'cmd', label: 'CMD' },
+              { value: 'other', label: 'Other' },
+            ],
           },
           guidance: {
             type: 'string',

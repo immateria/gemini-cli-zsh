@@ -138,7 +138,13 @@ describe('ShellToolInvocation Policy Update', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    mockConfig = {} as Config;
+    mockConfig = {
+      getShellConfiguration: () => ({
+        executable: 'bash',
+        argsPrefix: ['-c'],
+        shell: 'bash',
+      }),
+    } as unknown as Config;
     mockMessageBus = {} as MessageBus;
 
     vi.mocked(shellUtils.stripShellWrapper).mockImplementation(
@@ -164,6 +170,7 @@ describe('ShellToolInvocation Policy Update', () => {
     expect(options!.commandPrefix).toEqual(['git', 'npm']);
     expect(shellUtils.getCommandRoots).toHaveBeenCalledWith(
       'git status && npm test',
+      expect.objectContaining({ executable: 'bash', shell: 'bash' }),
     );
   });
 
@@ -183,6 +190,9 @@ describe('ShellToolInvocation Policy Update', () => {
       invocation as unknown as TestableShellToolInvocation
     ).getPolicyUpdateOptions(ToolConfirmationOutcome.ProceedAlways);
     expect(options!.commandPrefix).toEqual(['ls']);
-    expect(shellUtils.getCommandRoots).toHaveBeenCalledWith('ls -la /tmp');
+    expect(shellUtils.getCommandRoots).toHaveBeenCalledWith(
+      'ls -la /tmp',
+      expect.objectContaining({ executable: 'bash', shell: 'bash' }),
+    );
   });
 });

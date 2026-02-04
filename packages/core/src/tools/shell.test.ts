@@ -651,7 +651,7 @@ describe('ShellTool', () => {
         grep: 'rg',
         sed: 'sd',
       });
-      const shellTool = new ShellTool(mockConfig);
+      const shellTool = new ShellTool(mockConfig, createMockMessageBus());
       expect(shellTool.description).toContain('Tools: grep→rg, sed→sd.');
     });
   });

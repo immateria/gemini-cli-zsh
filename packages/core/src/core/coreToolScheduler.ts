@@ -1013,23 +1013,4 @@ export class CoreToolScheduler {
     });
   }
 
-  private isAutoApproved(toolCall: ValidatingToolCall): boolean {
-    if (this.config.getApprovalMode() === ApprovalMode.YOLO) {
-      return true;
-    }
-
-    const allowedTools = this.config.getAllowedTools() || [];
-    const { tool, invocation } = toolCall;
-    const toolName = typeof tool === 'string' ? tool : tool.name;
-
-    if (SHELL_TOOL_NAMES.includes(toolName)) {
-      return isShellInvocationAllowlisted(
-        invocation,
-        allowedTools,
-        this.config.getShellConfiguration(),
-      );
-    }
-
-    return doesToolInvocationMatch(tool, invocation, allowedTools);
-  }
 }

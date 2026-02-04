@@ -81,6 +81,11 @@ describe('ShellProcessor', () => {
       getPolicyEngine: vi.fn().mockReturnValue({
         check: mockPolicyEngineCheck,
       }),
+      getShellConfiguration: vi.fn().mockReturnValue({
+        executable: 'bash',
+        argsPrefix: ['-c'],
+        shell: 'bash',
+      }),
     };
 
     context = createMockCommandContext({

@@ -21,6 +21,7 @@ import type {
   Config,
   ToolRegistry,
   MessageBus,
+  AnyToolInvocation,
 } from '../index.js';
 import {
   DEFAULT_TRUNCATE_TOOL_OUTPUT_LINES,
@@ -43,11 +44,6 @@ import {
 import * as modifiableToolModule from '../tools/modifiable-tool.js';
 import { isShellInvocationAllowlisted } from '../utils/shell-permissions.js';
 import { getShellConfiguration } from '../utils/shell-utils.js';
-import {
-  DEFAULT_GEMINI_MODEL,
-  PREVIEW_GEMINI_MODEL,
-} from '../config/models.js';
-
 import { DEFAULT_GEMINI_MODEL } from '../config/models.js';
 import type { PolicyEngine } from '../policy/policy-engine.js';
 import { DiscoveredMCPTool } from '../tools/mcp-tool.js';

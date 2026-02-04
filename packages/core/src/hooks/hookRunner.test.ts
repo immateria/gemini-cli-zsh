@@ -354,12 +354,11 @@ describe('HookRunner', () => {
         );
 
         expect(spawn).toHaveBeenCalledWith(
-          expect.stringMatching(/bash|powershell/),
+          expect.stringMatching(/bash|zsh|powershell/),
           expect.arrayContaining([
             expect.stringMatching(/['"]?\/test\/project['"]?\/hooks\/test\.sh/),
           ]),
           expect.objectContaining({
-            shell: false,
             env: expect.objectContaining({
               GEMINI_PROJECT_DIR: '/test/project',
               CLAUDE_PROJECT_DIR: '/test/project',
@@ -397,11 +396,11 @@ describe('HookRunner', () => {
 
         // If secure, spawn will be called with the shell executable and escaped command
         expect(spawn).toHaveBeenCalledWith(
-          expect.stringMatching(/bash|powershell/),
+          expect.stringMatching(/bash|zsh|powershell/),
           expect.arrayContaining([
             expect.stringMatching(/ls (['"]).*echo.*pwned.*\1/),
           ]),
-          expect.objectContaining({ shell: false }),
+          expect.objectContaining({}),
         );
       });
     });

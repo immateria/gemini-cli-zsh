@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`ShellTool > getDescription > should return the non-windows description when not on windows 1`] = `
-"This tool executes a given shell command as \`zsh -c <command>\`. Configured shell: \`zsh\` (zsh). Command can start background processes using \`&\`. Command is executed as a subprocess that leads its own process group. Command process group can be terminated as \`kill -- -PGID\` or signaled as \`kill -s SIGNAL -- -PGID\`. This shell is zsh; avoid bash-only constructs and prefer zsh-compatible syntax.
+"This tool executes a given shell command as \`bash -c <command>\`. Configured shell: \`bash\` (bash). Command can start background processes using \`&\`. Command is executed as a subprocess that leads its own process group. Command process group can be terminated as \`kill -- -PGID\` or signaled as \`kill -s SIGNAL -- -PGID\`. Guidance: Use bash-compatible syntax. Arrays are 0-indexed. Use \`[[\` for conditionals.
 
       The following information is returned:
 
@@ -14,7 +14,7 @@ exports[`ShellTool > getDescription > should return the non-windows description 
 `;
 
 exports[`ShellTool > getDescription > should return the windows description when on windows 1`] = `
-"This tool executes a given shell command as \`powershell.exe -NoProfile -Command <command>\`. Configured shell: \`powershell.exe\` (powershell). Command can start background processes using PowerShell constructs such as \`Start-Process -NoNewWindow\` or \`Start-Job\`. Guidance: Use PowerShell syntax and cmdlets (e.g., Get-ChildItem, Select-Object).
+"This tool executes a given shell command as \`C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -NoProfile -Command <command>\`. Configured shell: \`C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\` (powershell). Command can start background processes using PowerShell constructs such as \`Start-Process -NoNewWindow\` or \`Start-Job\`. Guidance: Use PowerShell cmdlets. Pipelines pass objects. Use \`$_\` in script blocks. Pipelines pass structured data (objects), not plain text.
 
       The following information is returned:
 

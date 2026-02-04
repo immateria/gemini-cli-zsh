@@ -206,10 +206,10 @@ export function SettingsDialog({
         ...mergedSettings.tools,
         shell: {
           ...mergedSettings.tools?.shell,
-          executable: getEffectiveShellValue('tools.shell.executable'),
+          executable: getEffectiveShellValue('tools.shell.executable') as string | undefined,
           argsPrefix: normalizedArgsPrefix,
-          shellType: getEffectiveShellValue('tools.shell.shellType'),
-          profile: getEffectiveShellValue('tools.shell.profile'),
+          shellType: getEffectiveShellValue('tools.shell.shellType') as string | undefined,
+          profile: getEffectiveShellValue('tools.shell.profile') as string | undefined,
         },
       },
     });
@@ -219,7 +219,7 @@ export function SettingsDialog({
         ...mergedSettings.tools,
         shell: {
           ...mergedSettings.tools?.shell,
-          guidance: getEffectiveShellValue('tools.shell.guidance'),
+          guidance: getEffectiveShellValue('tools.shell.guidance') as string | undefined,
         },
       },
     });
@@ -229,8 +229,8 @@ export function SettingsDialog({
         ...mergedSettings.tools,
         shell: {
           ...mergedSettings.tools?.shell,
-          searchCommand: getEffectiveShellValue('tools.shell.searchCommand'),
-          profile: getEffectiveShellValue('tools.shell.profile'),
+          searchCommand: getEffectiveShellValue('tools.shell.searchCommand') as string | undefined,
+          profile: getEffectiveShellValue('tools.shell.profile') as string | undefined,
         },
       },
     });
@@ -240,7 +240,7 @@ export function SettingsDialog({
         ...mergedSettings.tools,
         shell: {
           ...mergedSettings.tools?.shell,
-          searchGuidance: getEffectiveShellValue('tools.shell.searchGuidance'),
+          searchGuidance: getEffectiveShellValue('tools.shell.searchGuidance') as string | undefined,
         },
       },
     });
@@ -250,7 +250,7 @@ export function SettingsDialog({
         ...mergedSettings.tools,
         shell: {
           ...mergedSettings.tools?.shell,
-          toolGuidance: getEffectiveShellValue('tools.shell.toolGuidance'),
+          toolGuidance: getEffectiveShellValue('tools.shell.toolGuidance') as Record<string, string> | undefined,
         },
       },
     });
@@ -261,8 +261,53 @@ export function SettingsDialog({
     config.setShellToolGuidance(shellToolGuidance);
   };
 
-  const generateSettingsItems = () => {
-    const settingKeys = searchQuery ? filteredKeys : getDialogSettingKeys();
+  // Calculate max width for the left column (Label/Description) to keep values aligned or close
+  const maxLabelOrDescriptionWidth = useMemo(() => {
+    const allKeys = getDialogSettingKeys();
+    let max = 0;
+    for (const key of allKeys) {
+      const def = getSettingDefinition(key);
+      if (!def) continue;
+
+      const scopeMessage = getScopeMessageForSetting(
+        key,
+        selectedScope,
+        settings,
+      );
+      const label = def.label || key;
+      const labelFull = label + (scopeMessage ? ` ${scopeMessage}` : '');
+      const lWidth = getCachedStringWidth(labelFull);
+      const dWidth = def.description
+        ? getCachedStringWidth(def.description)
+        : 0;
+
+      max = Math.max(max, lWidth, dWidth);
+    }
+    return max;
+  }, [selectedScope, settings]);
+
+  // Get mainAreaWidth for search buffer viewport
+  const { mainAreaWidth } = useUIState();
+  const viewportWidth = mainAreaWidth - 8;
+
+  // Search input buffer
+  const searchBuffer = useTextBuffer({
+    initialText: '',
+    initialCursorOffset: 0,
+    viewport: {
+      width: viewportWidth,
+      height: 1,
+    },
+    isValidPath: () => false,
+    singleLine: true,
+    onChange: (text) => setSearchQuery(text),
+  });
+
+  // Generate items for BaseSettingsDialog
+  const settingKeys = searchQuery ? filteredKeys : getDialogSettingKeys();
+  const items: SettingsDialogItem[] = useMemo(() => {
+    const scopeSettings = settings.forScope(selectedScope).settings;
+    const mergedSettings = settings.merged;
 
     return settingKeys.map((key) => {
       const definition = getSettingDefinition(key);
@@ -616,9 +661,6 @@ export function SettingsDialog({
         settings,
         selectedScope,
       );
-              if (currentSetting.value.startsWith('tools.shell.')) {
-                applyShellRuntimeSettings(immediateSettingsObject);
-              }
 
       // Remove saved keys from global pending changes
       setGlobalPendingChanges((prev) => {
